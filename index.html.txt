@@ -90,7 +90,7 @@
 
     <script>
         // ⚠️ 여기에 구글 앱스 스크립트로 배포한 웹앱 URL을 넣으세요!
-        const SCRIPT_URL = "여기에_구글_앱스_스크립트_URL을_넣으세요"; 
+        const SCRIPT_URL = "_구글_앱스_스크립트_URL을_넣으세요https://script.google.com/macros/s/AKfycbxv0g3o-blbEL-p1kZzbo7Hm_EIdXiy4ovRlh5KuXf9nRRXgL3ryP7sstKzIXP9-t_boQ/exec"; 
         
         let allItems = [];
 
