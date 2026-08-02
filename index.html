@@ -30,9 +30,9 @@
 
         .table-responsive { 
             overflow-x: auto; background: #fff; border-radius: 8px; border: 1px solid #dee2e6; box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
-            max-height: 70vh; /* 세로 스크롤 추가 */
+            max-height: 70vh;
         }
-        table { width: 100%; border-collapse: collapse; min-width: 1800px; /* 열이 많으므로 최소 너비를 넓게 설정 */ }
+        table { width: 100%; border-collapse: collapse; min-width: 1800px; }
         th { 
             background-color: #f1f3f5; border-bottom: 2px solid #dee2e6; padding: 12px; text-align: left; 
             font-size: 14px; color: #495057; position: sticky; top: 0; z-index: 1; 
@@ -40,7 +40,6 @@
         td { padding: 10px 12px; border-bottom: 1px solid #dee2e6; vertical-align: middle; font-size: 14px; word-break: keep-all; }
         tr:hover { background-color: #f8f9fa; }
         
-        .highlight { background-color: #e8f0fe; color: #1a73e8; font-weight: bold; padding: 2px 4px; border-radius: 4px; }
         .stat-bar { margin-top: 10px; font-size: 14px; color: #666; font-weight: bold; text-align: right; }
     </style>
 </head>
@@ -54,7 +53,14 @@
 
     <div class="search-container">
         <div class="search-box">
-            <input type="text" id="searchInput" placeholder="장소, 비품명, 비고 등 아무거나 검색해보세요..." oninput="searchItems()">
+            <!-- 💡 드롭다운 메뉴 추가 -->
+            <select id="searchTarget" onchange="searchItems()" style="padding: 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 15px; outline: none;">
+                <option value="all">전체 범위 검색</option>
+                <option value="name">비품명만 검색</option>
+                <option value="location">장소명만 검색</option>
+                <option value="note">비고만 검색</option>
+            </select>
+            <input type="text" id="searchInput" placeholder="검색어를 입력하세요..." oninput="searchItems()">
         </div>
         <div id="statBar" class="stat-bar">데이터를 불러오는 중...</div>
     </div>
@@ -89,7 +95,7 @@
     </div>
 
     <script>
-        // ⚠️ 여기에 구글 앱스 스크립트로 배포한 웹앱 URL을 넣으세요!
+        // ⚠️ 방금 알려주신 앱스 스크립트 주소가 미리 입력되어 있습니다!
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxv0g3o-blbEL-p1kZzbo7Hm_EIdXiy4ovRlh5KuXf9nRRXgL3ryP7sstKzIXP9-t_boQ/exec"; 
         
         let allItems = [];
@@ -99,10 +105,7 @@
             fetch(SCRIPT_URL)
                 .then(response => response.json())
                 .then(data => {
-                    // 구글 시트에서 가져온 데이터(배열)를 저장
-                    // 앱스 스크립트에서 { data: [...] } 형태로 넘긴다고 가정 (기존 기출문제 앱스스크립트 구조 참고)
                     allItems = data.data || data; 
-                    
                     document.getElementById('loadingBar').style.display = 'none';
                     renderTable(allItems);
                 })
@@ -113,6 +116,32 @@
                     document.getElementById('loadingBar').style.color = "#721c24";
                 });
         });
+
+        // 💡 1. 자주 쓰는 방 이름별 원하는 색상 수동 지정
+        const predefinedColors = {
+            '루까': '#ffe4e1',         // 연한 핑크
+            '요셉': '#e3f2fd',         // 연한 파랑
+            '만남의방': '#e8f5e9',     // 연한 초록
+            '대건안드레아': '#fff3e0', // 연한 주황
+            '신부님집무실': '#f3e5f5', // 연한 보라
+            '주방': '#fff9c4'          // 연한 노랑
+        };
+
+        // 💡 2. 방 이름에 맞춰 자동으로 배경색을 뽑아주는 함수
+        function getRoomColor(roomName) {
+            if (!roomName) return '#f1f3f5'; // 빈칸이면 회색
+            
+            // 지정해 둔 색상이 있으면 그걸 씁니다.
+            if (predefinedColors[roomName]) return predefinedColors[roomName];
+            
+            // 지정되지 않은 방은 이름 글자를 바탕으로 자동으로 예쁜 파스텔톤 색상을 생성합니다.
+            let hash = 0;
+            for (let i = 0; i < roomName.length; i++) {
+                hash = roomName.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const hue = Math.abs(hash) % 360;
+            return `hsl(${hue}, 75%, 85%)`; 
+        }
 
         // 테이블 렌더링 함수
         function renderTable(data) {
@@ -127,12 +156,17 @@
                 return;
             }
 
-            // 17개 열을 모두 매핑하여 렌더링
             data.forEach(item => {
-                // 키 이름은 구글 시트의 첫 번째 행(헤더)과 정확히 일치해야 합니다.
+                const rName = item['장소명'] || '';
+                const rColor = getRoomColor(rName); // 위에서 만든 함수로 색상을 가져옵니다.
+
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td><span class="highlight">${item['장소명'] || ''}</span></td>
+                    <td>
+                        <span style="background-color: ${rColor}; color: #333; font-weight: bold; padding: 4px 8px; border-radius: 6px; display: inline-block; white-space: nowrap; border: 1px solid rgba(0,0,0,0.05);">
+                            ${rName}
+                        </span>
+                    </td>
                     <td>${item['장소코드'] || ''}</td>
                     <td>${item['비품구분명'] || ''}</td>
                     <td>${item['비품구분코드'] || ''}</td>
@@ -154,9 +188,10 @@
             });
         }
 
-        // 검색 및 필터링 함수
+        // 선택한 범위에 따라 다르게 작동하는 검색 함수
         function searchItems() {
             const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            const target = document.getElementById('searchTarget').value; 
             
             if (!query) {
                 renderTable(allItems);
@@ -164,9 +199,23 @@
             }
             
             const filtered = allItems.filter(item => {
-                // 모든 열의 데이터를 하나의 문자열로 합쳐서 검색어가 포함되어 있는지 확인
-                const rowString = Object.values(item).map(val => String(val).toLowerCase()).join(' ');
-                return rowString.includes(query);
+                if (target === 'all') {
+                    const rowString = Object.values(item).map(val => String(val).toLowerCase()).join(' ');
+                    return rowString.includes(query);
+                } 
+                else if (target === 'name') {
+                    const itemName = String(item['비품명'] || '').toLowerCase();
+                    return itemName.includes(query);
+                }
+                else if (target === 'location') {
+                    const locName = String(item['장소명'] || '').toLowerCase();
+                    return locName.includes(query);
+                }
+                else if (target === 'note') {
+                    const noteStr = String(item['비고'] || '').toLowerCase();
+                    return noteStr.includes(query);
+                }
+                return true;
             });
             
             renderTable(filtered);
